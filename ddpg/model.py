@@ -94,7 +94,7 @@ class Critic(BaseModel):
         super(Critic, self).__init__(nb_states, nb_actions, init_w)
 
         self.fc1 = nn.Linear(self.cnn_out_dims + nb_actions, 200)
-        self.fc2 = nn.Linear(200, nb_actions)
+        self.fc2 = nn.Linear(200, 1)
 
         self.init_weights(init_w)
         
@@ -119,12 +119,3 @@ class Critic(BaseModel):
         a = Variable(torch.rand((batch_size, self.nb_actions)))
         out = self.forward((x, a)).data.numpy()
         return out 
-
-if __name__ == '__main__':
-    actor = Actor((12, 64, 64), 2)
-    critic = Critic((12, 64, 64), 2)
-
-    actor_out = actor._sample_output(32)
-    print(actor_out.shape)
-    critic_out = critic._sample_output(32)
-    print(critic_out.shape)

@@ -6,7 +6,7 @@ class MockEnvironment():
         self.s_shape = s_shape
 
     def reset(self):
-        return np.random.rand(self.s_shape)
+        return np.random.rand(*self.s_shape)
     
     def step(self, a):
-        return np.random.rand(self.s_shape), 0.0, False, None
+        return np.random.rand(*self.s_shape), 0.0, False, None

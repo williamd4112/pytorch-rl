@@ -11,6 +11,8 @@ from evaluator import Evaluator
 from ddpg import DDPG
 from util import *
 
+WARM_UP_STEPS = 10
+
 gym.undo_logger_setup()
 
 def train(num_iterations, gent, env, validate_steps, output, max_episode_length=None, debug=False):
@@ -27,7 +29,7 @@ def train(num_iterations, gent, env, validate_steps, output, max_episode_length=
             agent.reset(observation)
 
         # agent pick action ...
-        if step <= args.warmup:
+        if step <= WARM_UP_STEPS:
             action = agent.random_action()
         else:
             action = agent.select_action(observation)
@@ -40,7 +42,7 @@ def train(num_iterations, gent, env, validate_steps, output, max_episode_length=
 
         # agent observe and update policy
         agent.observe(reward, observation2, done)
-        if step > args.warmup :
+        if step > WARM_UP_STEPS :
             agent.update_policy()
 
         # update 
@@ -66,11 +68,11 @@ def train(num_iterations, gent, env, validate_steps, output, max_episode_length=
             episode += 1
 
 if __name__ == "__main__":
-    nb_states = [64, 64, 12]
+    nb_states = (1, 64, 64)
     nb_actions = 2
     env = MockEnvironment(nb_states)
 
     agent = DDPG(nb_states, nb_actions)
 
-    train(100, agent, env, 
-        100, "log", max_episode_length=100, debug=True)
+    train(1000, agent, env, 
+        1000, "log", max_episode_length=100, debug=True)

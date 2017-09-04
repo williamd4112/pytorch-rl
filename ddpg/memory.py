@@ -191,15 +191,15 @@ class SequentialMemory(Memory):
             state0_batch.append(e.state0)
             state1_batch.append(e.state1)
             reward_batch.append(e.reward)
-            action_batch.append(e.action)
+            action_batch.append(e.action[np.newaxis, :])
             terminal1_batch.append(0. if e.terminal1 else 1.)
 
         # Prepare and validate parameters.
-        state0_batch = np.array(state0_batch).reshape(batch_size,-1)
-        state1_batch = np.array(state1_batch).reshape(batch_size,-1)
-        terminal1_batch = np.array(terminal1_batch).reshape(batch_size,-1)
-        reward_batch = np.array(reward_batch).reshape(batch_size,-1)
-        action_batch = np.array(action_batch).reshape(batch_size,-1)
+        state0_batch = np.concatenate(state0_batch)
+        state1_batch = np.concatenate(state1_batch)
+        terminal1_batch = np.array(terminal1_batch)
+        reward_batch = np.array(reward_batch)
+        action_batch = np.concatenate(action_batch)
 
         return state0_batch, action_batch, reward_batch, state1_batch, terminal1_batch
 

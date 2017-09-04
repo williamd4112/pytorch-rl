@@ -12,6 +12,17 @@ from util import *
 
 # from ipdb import set_trace as debug
 
+ACTOR_LR = 1e-4
+CRITIC_LR = 1e-3
+MEMORY_SIZE = int(1e6)
+HISTORY_LEN = 1
+BATCH_SIZE = 4
+OU_THETA = 0.15
+OU_SIGMA = 0.2
+OU_MU = 0.0
+TAU = 1e-3
+GAMMA = 0.99
+
 criterion = nn.MSELoss()
 
 class DDPG(object):
@@ -20,37 +31,32 @@ class DDPG(object):
         self.nb_actions= nb_actions
         
         # Create Actor and Critic Network
-        net_cfg = {
-            'init_w':args.init_w
-        }
-        self.actor = Actor(self.nb_states, self.nb_actions, )
-        self.actor_target = Actor(self.nb_states, self.nb_actions, **net_cfg)
-        self.actor_optim  = Adam(self.actor.parameters(), lr=args.prate)
+        self.actor = Actor(self.nb_states, self.nb_actions)
+        self.actor_target = Actor(self.nb_states, self.nb_actions)
+        self.actor_optim  = Adam(self.actor.parameters(), lr=1e-4)
 
-        self.critic = Critic(self.nb_states, self.nb_actions, **net_cfg)
-        self.critic_target = Critic(self.nb_states, self.nb_actions, **net_cfg)
-        self.critic_optim  = Adam(self.critic.parameters(), lr=args.rate)
+        self.critic = Critic(self.nb_states, self.nb_actions)
+        self.critic_target = Critic(self.nb_states, self.nb_actions)
+        self.critic_optim  = Adam(self.critic.parameters(), lr=1e-3)
 
         hard_update(self.actor_target, self.actor) # Make sure target is with the same weight
         hard_update(self.critic_target, self.critic)
         
         #Create replay buffer
-        self.memory = SequentialMemory(limit=args.rmsize, window_length=args.window_length)
-        self.random_process = OrnsteinUhlenbeckProcess(size=nb_actions, theta=args.ou_theta, mu=args.ou_mu, sigma=args.ou_sigma)
+        self.memory = SequentialMemory(limit=MEMORY_SIZE, window_length=HISTORY_LEN)
+        self.random_process = OrnsteinUhlenbeckProcess(size=nb_actions, theta=OU_THETA, mu=OU_MU, sigma=OU_SIGMA)
 
         # Hyper-parameters
-        self.batch_size = args.bsize
-        self.tau = args.tau
-        self.discount = args.discount
-        self.depsilon = 1.0 / args.epsilon
+        self.batch_size = BATCH_SIZE
+        self.tau = TAU
+        self.discount = GAMMA
+        self.depsilon = 1.0 / 50000
 
-        # 
         self.epsilon = 1.0
         self.s_t = None # Most recent state
         self.a_t = None # Most recent action
         self.is_training = True
 
-        # 
         if USE_CUDA: self.cuda()
 
     def update_policy(self):
@@ -62,7 +68,7 @@ class DDPG(object):
         next_q_values = self.critic_target([
             to_tensor(next_state_batch, volatile=True),
             self.actor_target(to_tensor(next_state_batch, volatile=True)),
-        ])
+        ])[:, 0]
         next_q_values.volatile=False
 
         target_q_batch = to_tensor(reward_batch) + \
@@ -77,7 +83,7 @@ class DDPG(object):
         value_loss.backward()
         self.critic_optim.step()
 
-        # Actor update
+        # Actor update  
         self.actor.zero_grad()
 
         policy_loss = -self.critic([
@@ -118,8 +124,8 @@ class DDPG(object):
     def select_action(self, s_t, decay_epsilon=True):
         action = to_numpy(
             self.actor(to_tensor(np.array([s_t])))
-        ).squeeze(1)
-        action += self.is_training*max(self.epsilon, 0)*self.random_process.sample()
+        )[0]
+        action += self.is_training * max(self.epsilon, 0) * self.random_process.sample()
         action = np.clip(action, -1., 1.)
 
         if decay_epsilon:
