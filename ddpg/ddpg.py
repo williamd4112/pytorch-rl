@@ -22,6 +22,7 @@ OU_SIGMA = 0.2
 OU_MU = 0.0
 TAU = 1e-3
 GAMMA = 0.99
+DEPSILON = 50000.0
 
 criterion = nn.MSELoss()
 
@@ -50,7 +51,7 @@ class DDPG(object):
         self.batch_size = BATCH_SIZE
         self.tau = TAU
         self.discount = GAMMA
-        self.depsilon = 1.0 / 50000
+        self.depsilon = 1.0 / DEPSILON
 
         self.epsilon = 1.0
         self.s_t = None # Most recent state

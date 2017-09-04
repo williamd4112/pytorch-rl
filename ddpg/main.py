@@ -4,7 +4,6 @@ import numpy as np
 import argparse
 from copy import deepcopy
 import torch
-import gym
 
 from env_mock import MockEnvironment
 from evaluator import Evaluator
@@ -14,6 +13,32 @@ from util import *
 WARM_UP_STEPS = 10
 
 gym.undo_logger_setup()
+
+class EnvironmentProxy(object):
+    def __init__(self, env, s_shape, act_scale):
+        self.env = env
+        self.s_shape = s_shape
+        self.act_scale = act_scale
+
+    def _process_obs(self, obs):
+        return cv2.resize(obs, (s_shape))
+
+    def reset(self):
+        obs = self.env.reset()
+        obs = self._process_obs(obs)
+        return obs
+
+    def step(self, act):
+        act = self.act_scale * act
+        obs, reward, done = self.env.step(act)
+        obs = self._process_obs(obs)
+        return obs, reward, done, None
+
+    def render(self):
+        self.env.render()
+
+    def close(self):
+        self.env.close()
 
 def train(num_iterations, gent, env, validate_steps, output, max_episode_length=None, debug=False):
 
@@ -68,11 +93,28 @@ def train(num_iterations, gent, env, validate_steps, output, max_episode_length=
             episode += 1
 
 if __name__ == "__main__":
+    from unity3d_env import Unity3DEnvironment
+
     nb_states = (1, 64, 64)
     nb_actions = 2
-    env = MockEnvironment(nb_states)
 
-    agent = DDPG(nb_states, nb_actions)
-
-    train(1000, agent, env, 
-        1000, "log", max_episode_length=100, debug=True)
+    #agent = DDPG(nb_states, nb_actions)
+    env = Unity3DEnvironment()
+    env = EnvironmentProxy(env, (64, 64), 25.0)
+    for episode in range(1000):
+        obs = env.reset()
+        for t in range(10000):
+            env.render()
+            #act = env.sample() * 2.0
+            act = np.array([3.0, 0.0])
+            obs, reward, done = env.step(act, non_block=False)
+            print (obs.shape)
+            print (act, reward, done)
+        
+            if done:
+                break
+            print ('Episode %d' % (episode))
+    env.close()
+    # train(1000, agent, env, 
+    #     1000, "log", max_episode_length=100, debug=True)
+    #env.close()
