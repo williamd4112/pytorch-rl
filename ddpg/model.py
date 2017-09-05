@@ -30,7 +30,7 @@ class BaseModel(nn.Module):
         self.pool1 = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(32, 32, 5, 1)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.conv3 = nn.Conv2d(32, 64, 4, 1)
+        self.conv3 = nn.Conv2d(32, 32, 4, 1)
         self.cnn_out_dims = self._get_cnn_out_dims()
 
     def init_weights(self, init_w):
@@ -48,11 +48,14 @@ class BaseModel(nn.Module):
         out = self.conv1(x)
         out = self.relu(out)
         out = self.pool1(out)
+        
         out = self.conv2(out)
         out = self.relu(out)
         out = self.pool2(out)
+        
         out = self.conv3(out)
         out = self.relu(out)
+        
         return out
 
     def _get_cnn_out_dims(self):
@@ -67,11 +70,11 @@ class BaseModel(nn.Module):
         return out 
 
 class Actor(BaseModel):
-    def __init__(self, nb_states, nb_actions, init_w=3e-4):
+    def __init__(self, nb_states, nb_actions, init_w=3e-5):
         super(Actor, self).__init__(nb_states, nb_actions, init_w)
 
-        self.fc1 = nn.Linear(self.cnn_out_dims, 200)
-        self.fc2 = nn.Linear(200, nb_actions)
+        self.fc1 = nn.Linear(self.cnn_out_dims, 512)
+        self.fc2 = nn.Linear(512, nb_actions)
 
         self.init_weights(init_w)
     
@@ -90,11 +93,11 @@ class Actor(BaseModel):
         return out
     
 class Critic(BaseModel):
-    def __init__(self, nb_states, nb_actions, init_w=3e-4):
+    def __init__(self, nb_states, nb_actions, init_w=3e-5):
         super(Critic, self).__init__(nb_states, nb_actions, init_w)
 
-        self.fc1 = nn.Linear(self.cnn_out_dims + nb_actions, 200)
-        self.fc2 = nn.Linear(200, 1)
+        self.fc1 = nn.Linear(self.cnn_out_dims + nb_actions, 512)
+        self.fc2 = nn.Linear(512, 1)
 
         self.init_weights(init_w)
         

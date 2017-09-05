@@ -10,9 +10,9 @@ from evaluator import Evaluator
 from ddpg import DDPG
 from util import *
 
-WARM_UP_STEPS = 10
+import cv2
 
-gym.undo_logger_setup()
+WARM_UP_STEPS = 1500
 
 class EnvironmentProxy(object):
     def __init__(self, env, s_shape, act_scale):
@@ -21,7 +21,8 @@ class EnvironmentProxy(object):
         self.act_scale = act_scale
 
     def _process_obs(self, obs):
-        return cv2.resize(obs, (s_shape))
+        obs = cv2.resize(obs, self.s_shape) / 255.0
+        return np.transpose(obs, [2, 0, 1])
 
     def reset(self):
         obs = self.env.reset()
@@ -29,9 +30,16 @@ class EnvironmentProxy(object):
         return obs
 
     def step(self, act):
-        act = self.act_scale * act
-        obs, reward, done = self.env.step(act)
-        obs = self._process_obs(obs)
+        act = np.array([5.0, act])
+        for i in range(1):
+            obs, reward, done = self.env.step(act)
+            obs = self._process_obs(obs)
+            if abs(reward) < 1.0:
+                reward = 0.0
+            if reward <= -1.0:
+                done = True
+            if done:
+                break
         return obs, reward, done, None
 
     def render(self):
@@ -62,7 +70,7 @@ def train(num_iterations, gent, env, validate_steps, output, max_episode_length=
         # env response with next_observation, reward, terminate_info
         observation2, reward, done, info = env.step(action)
         observation2 = deepcopy(observation2)
-        if max_episode_length and episode_steps >= max_episode_length -1:
+        if max_episode_length and episode_steps >= max_episode_length - 1:
             done = True
 
         # agent observe and update policy
@@ -75,7 +83,9 @@ def train(num_iterations, gent, env, validate_steps, output, max_episode_length=
         episode_steps += 1
         episode_reward += reward
         observation = deepcopy(observation2)
-
+        
+        if debug: prGreen('steps:{}, reward:{}, action:{}, done:{}'.format(step, reward, action, done))
+        
         if done: 
             # end of episode
             if debug: prGreen('#{}: episode_reward:{} steps:{}'.format(episode,episode_reward,step))
@@ -95,26 +105,14 @@ def train(num_iterations, gent, env, validate_steps, output, max_episode_length=
 if __name__ == "__main__":
     from unity3d_env import Unity3DEnvironment
 
-    nb_states = (1, 64, 64)
-    nb_actions = 2
+    nb_states = (3, 64, 64)
+    nb_actions = 1
 
-    #agent = DDPG(nb_states, nb_actions)
-    env = Unity3DEnvironment()
-    env = EnvironmentProxy(env, (64, 64), 25.0)
-    for episode in range(1000):
-        obs = env.reset()
-        for t in range(10000):
-            env.render()
-            #act = env.sample() * 2.0
-            act = np.array([3.0, 0.0])
-            obs, reward, done = env.step(act, non_block=False)
-            print (obs.shape)
-            print (act, reward, done)
-        
-            if done:
-                break
-            print ('Episode %d' % (episode))
-    env.close()
-    # train(1000, agent, env, 
-    #     1000, "log", max_episode_length=100, debug=True)
-    #env.close()
+    try:
+        agent = DDPG(nb_states, nb_actions)
+        env = Unity3DEnvironment()
+        env = EnvironmentProxy(env, (64, 64), 10.0)
+        train(50000000, agent, env, 
+            1000, "log", max_episode_length=100, debug=True)    
+    except KeyboardInterrupt:
+        env.close()

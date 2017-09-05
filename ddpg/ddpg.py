@@ -16,13 +16,13 @@ ACTOR_LR = 1e-4
 CRITIC_LR = 1e-3
 MEMORY_SIZE = int(1e6)
 HISTORY_LEN = 1
-BATCH_SIZE = 4
-OU_THETA = 0.15
-OU_SIGMA = 0.2
+BATCH_SIZE = 16
+OU_THETA = 0.5
+OU_SIGMA = 0.3
 OU_MU = 0.0
-TAU = 1e-3
+TAU = 1e-2
 GAMMA = 0.99
-DEPSILON = 50000.0
+DEPSILON = 100000.0
 
 criterion = nn.MSELoss()
 
@@ -34,11 +34,11 @@ class DDPG(object):
         # Create Actor and Critic Network
         self.actor = Actor(self.nb_states, self.nb_actions)
         self.actor_target = Actor(self.nb_states, self.nb_actions)
-        self.actor_optim  = Adam(self.actor.parameters(), lr=1e-4)
+        self.actor_optim  = Adam(self.actor.parameters(), lr=ACTOR_LR)
 
         self.critic = Critic(self.nb_states, self.nb_actions)
         self.critic_target = Critic(self.nb_states, self.nb_actions)
-        self.critic_optim  = Adam(self.critic.parameters(), lr=1e-3)
+        self.critic_optim  = Adam(self.critic.parameters(), lr=CRITIC_LR)
 
         hard_update(self.actor_target, self.actor) # Make sure target is with the same weight
         hard_update(self.critic_target, self.critic)
@@ -78,10 +78,14 @@ class DDPG(object):
         # Critic update
         self.critic.zero_grad()
 
-        q_batch = self.critic([ to_tensor(state_batch), to_tensor(action_batch) ])
+        q_batch = self.critic([to_tensor(state_batch), to_tensor(action_batch) ])
         
         value_loss = criterion(q_batch, target_q_batch)
         value_loss.backward()
+        
+        torch.nn.utils.clip_grad_norm(self.critic.parameters(), 10.0)
+        for p in self.critic.parameters():
+            p.data.add_(-CRITIC_LR, p.grad.data)
         self.critic_optim.step()
 
         # Actor update  
@@ -94,6 +98,9 @@ class DDPG(object):
 
         policy_loss = policy_loss.mean()
         policy_loss.backward()
+        torch.nn.utils.clip_grad_norm(self.actor.parameters(), 10.0)
+        for p in self.actor.parameters():
+            p.data.add_(-ACTOR_LR, p.grad.data)
         self.actor_optim.step()
 
         # Target update
@@ -126,7 +133,10 @@ class DDPG(object):
         action = to_numpy(
             self.actor(to_tensor(np.array([s_t])))
         )[0]
-        action += self.is_training * max(self.epsilon, 0) * self.random_process.sample()
+        ou = self.random_process.sample()
+
+        prGreen('eps:{}, act:{}, random:{}'.format(self.epsilon, action, ou))
+        action += self.is_training * max(self.epsilon, 0) * ou
         action = np.clip(action, -1., 1.)
 
         if decay_epsilon:

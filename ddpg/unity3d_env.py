@@ -130,7 +130,7 @@ class Unity3DEnvironment(object):
 		self.sock.send(self.action_space.reset())
 		self.sock.send(self.action_space.noop())
 		obs, reward, done = self._recv_next_state()
-		return None
+		return obs
 
 	def step(self, act, non_block=False):
 		'''
