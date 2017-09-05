@@ -11,12 +11,12 @@ __all__ = ['GymEnv']
 _ENV_LOCK = threading.Lock()
 
 class Unity3DPlayer(RLEnvironment):
-    ACTION_TABLE = [(2.0, 0.0), # Forward
-                    (-2.0, 0.0), # Backward
-                    (1.0, 0.5), # Forward-Right
-                    (-1.0, 0.5), # Backward-Right
-                    (1.0, -0.5), # Forward-Left
-                    (1.0, -0.5) ] # Backward-Left 
+    ACTION_TABLE = [(2.5, 0.0), # Forward
+                    (-2.5, 0.0), # Backward
+                    (0.25, 0.05), # Forward-Right
+                    (-0.25, 0.05), # Backward-Right
+                    (0.25, -0.05), # Forward-Left
+                    (0.25, -0.05) ] # Backward-Left 
 
     def __init__(self, connection, dumpdir=None, viz=False, auto_restart=True):
         if connection != None:
@@ -64,8 +64,25 @@ if __name__ == '__main__':
     port = int(sys.argv[1])
     p = Unity3DPlayer(connection=('127.0.0.1', port))
     p.restart_episode()
-    for i in range(100):
-        r, done = p.action(0)
-        print(r)
-    p.close()
+    try:
+        for i in range(100):
+            key = input()
+            act = 0
+            print(key)
+            if key == 'w':
+                act = 0
+            elif key == 's':
+                act = 1
+            elif key == 'e':
+                act = 2
+            elif key == 'c':
+                act = 3
+            elif key == 'q':
+                act = 4
+            elif key == 'z':
+                act = 5
+            r, done = p.action(act)
+            print(r)
+    except:
+        p.close()
 

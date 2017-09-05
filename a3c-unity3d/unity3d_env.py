@@ -94,10 +94,10 @@ class ScalarRewardSpace(object):
 class Unity3DEnvironment(object):
     def __init__(self, server_address=('127.0.0.1', 8888), scene='navigation-v0'):
         # Open Unity3D
-        cmd = 'DISPLAY=:0 $UNITY_SCENES/%s/%s.x86_64 port %d' % (scene, scene, server_address[1])
-        self.proc = subprocess.Popen([cmd], shell=True)
-        time.sleep(3)
-        pid = self.proc.pid
+        #cmd = 'DISPLAY=:0 $UNITY_SCENES/%s/%s.x86_64 port %d' % (scene, scene, server_address[1])
+        #self.proc = subprocess.Popen([cmd], shell=True)
+        #time.sleep(3)
+        #pid = self.proc.pid
 
         # Create a TCP/IP socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
