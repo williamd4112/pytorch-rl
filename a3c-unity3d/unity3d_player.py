@@ -11,19 +11,19 @@ __all__ = ['GymEnv']
 _ENV_LOCK = threading.Lock()
 
 class Unity3DPlayer(RLEnvironment):
-    ACTION_TABLE = [(2.5, 0.0), # Forward
-                    (-2.5, 0.0), # Backward
-                    (0.25, 0.05), # Forward-Right
-                    (-0.25, 0.05), # Backward-Right
-                    (0.25, -0.05), # Forward-Left
-                    (0.25, -0.05) ] # Backward-Left 
+    ACTION_TABLE = [(0.5, 0.0), # Forward
+                    (-0.5, 0.0), # Backward
+                    (0.5, 1.0), # Forward-Right
+                    (-0.5, 1.0), # Backward-Right
+                    (0.5, -1.0), # Forward-Left
+                    (-0.5, -1.0) ] # Backward-Left 
 
-    def __init__(self, connection, dumpdir=None, viz=False, auto_restart=True):
+    def __init__(self, connection, skip=1, dumpdir=None, viz=False, auto_restart=True):
         if connection != None:
             with _ENV_LOCK:
                 self.gymenv = Unity3DEnvironment(server_address=connection)
             self.use_dir = dumpdir
-
+            self.skip = skip
             self.reset_stat()
             self.rwd_counter = StatCounter()
             self.restart_episode()
@@ -45,7 +45,12 @@ class Unity3DPlayer(RLEnvironment):
 
     def action(self, act):
         env_act = self.ACTION_TABLE[act]
-        self._ob, r, isOver, info = self.gymenv.step(env_act)
+        for i in range(self.skip):
+            self._ob, r, isOver, info = self.gymenv.step(env_act)
+            if r <= -1.0:
+                isOver = True
+            if isOver:
+                break            
         self.rwd_counter.feed(r)
         if isOver:
             self.finish_episode()
@@ -61,11 +66,12 @@ class Unity3DPlayer(RLEnvironment):
 
 if __name__ == '__main__':
     import sys
-    port = int(sys.argv[1])
-    p = Unity3DPlayer(connection=('127.0.0.1', port))
+    ip = sys.argv[1]
+    port = int(sys.argv[2])
+    p = Unity3DPlayer(connection=(ip, port))
     p.restart_episode()
     try:
-        for i in range(100):
+        for i in range(100000):
             key = input()
             act = 0
             print(key)

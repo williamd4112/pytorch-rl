@@ -48,11 +48,11 @@ CHANNEL = FRAME_HISTORY * 3
 IMAGE_SHAPE3 = IMAGE_SIZE + (CHANNEL,)
 
 LOCAL_TIME_MAX = 5
-STEPS_PER_EPOCH = 6000
+STEPS_PER_EPOCH = 600
 EVAL_EPISODE = 50
 BATCH_SIZE = 128
 PREDICT_BATCH_SIZE = 15     # batch for efficient forward
-SIMULATOR_PROC = 5
+SIMULATOR_PROC = 16
 PREDICTOR_THREAD_PER_GPU = 3
 PREDICTOR_THREAD = None
 
@@ -62,14 +62,14 @@ ENV_NAME = None
 
 def get_player(connection, viz=False, train=False, dumpdir=None):
     #pl = GymEnv(ENV_NAME, viz=viz, dumpdir=dumpdir)
-    pl = Unity3DPlayer(connection=connection)
+    pl = Unity3DPlayer(connection=connection, skip=1)
     if connection != None:
         pl = MapPlayerState(pl, lambda img: cv2.resize(img, IMAGE_SIZE[::-1]))
         pl = HistoryFramePlayer(pl, FRAME_HISTORY)
         if not train:
             pl = PreventStuckPlayer(pl, 30, 1)
         else:
-            pl = LimitLengthPlayer(pl, 60000)
+            pl = LimitLengthPlayer(pl, 500)
     return pl
 
 
@@ -251,9 +251,9 @@ def get_config():
             HumanHyperParamSetter('entropy_beta'),
             master,
             StartProcOrThread(master),
-            PeriodicTrigger(Evaluator(
-                EVAL_EPISODE, ['state'], ['policy'], get_player),
-                every_k_epochs=3),
+            #PeriodicTrigger(Evaluator(
+            #    EVAL_EPISODE, ['state'], ['policy'], get_player),
+            #    every_k_epochs=3),
         ],
         session_creator=sesscreate.NewSessionCreator(
             config=get_default_sess_config(0.5)),
